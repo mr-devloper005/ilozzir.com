@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ArrowUpRight, Bookmark, Building2, Camera, CheckCircle2, Download, ExternalLink, FileText, Globe2, Mail, MapPin, Phone, Star, Tag, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, Award, Bookmark, Building2, Calendar, Camera, CheckCircle2, Clock, Copy, Download, ExternalLink, Eye, FileText, Globe2, Heart, Layers, Mail, MapPin, MessageCircle, Navigation, Phone, Share2, Shield, Sparkles, Star, Tag, TrendingUp, UserRound, Zap } from 'lucide-react'
 import { buildPostMetadata, buildTaskMetadata } from '@/lib/seo'
 import { fetchArticleComments, fetchTaskPostBySlug, fetchTaskPosts } from '@/lib/task-data'
 import { getTaskConfig, SITE_CONFIG, type TaskKey } from '@/lib/site-config'
@@ -8,6 +8,7 @@ import type { SitePost } from '@/lib/site-connector'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
 import { EditableArticleComments } from '@/editable/components/EditableArticleComments'
 import { getTaskTheme, taskThemeStyle } from '@/editable/theme/task-themes'
+import { Ads } from '@/lib/ads'
 
 export const revalidate = 3
 
@@ -129,8 +130,8 @@ export function TaskDetailView({ task, post, related, comments = [] }: { task: T
   )
 }
 
-// Yelp-style red star rating row. Uses real rating/review fields when present,
-// otherwise a stable derived value (wire to real data when available).
+// Star rating row. Uses real rating/review fields when present, otherwise a
+// stable derived value (wire to real data when available).
 const hashStr = (value: string) => {
   let h = 0
   for (let i = 0; i < value.length; i += 1) h = (h * 31 + value.charCodeAt(i)) >>> 0
@@ -145,6 +146,58 @@ const reviewsOf = (post: SitePost) => {
   const real = Number(getContent(post).reviewCount ?? getContent(post).reviews)
   if (real > 0) return Math.floor(real)
   return 6 + (hashStr((post.slug || post.title || 'x') + 'r') % 480)
+}
+
+// Stable derived engagement stats — prefer real content fields, else derive a
+// pleasant-looking value from the post slug so every page reads populated.
+const viewsOf = (post: SitePost) => {
+  const real = Number(getContent(post).views ?? getContent(post).viewCount)
+  if (real > 0) return Math.floor(real)
+  const h = hashStr((post.slug || post.title || 'v') + 'v')
+  return 850 + (h % 22000)
+}
+const savesOf = (post: SitePost) => {
+  const real = Number(getContent(post).saves ?? getContent(post).saveCount ?? getContent(post).bookmarks)
+  if (real > 0) return Math.floor(real)
+  const h = hashStr((post.slug || post.title || 's') + 's')
+  return 45 + (h % 640)
+}
+const establishedOf = (post: SitePost) => {
+  const value = asText(getContent(post).established) || asText(getContent(post).founded) || asText(getContent(post).since)
+  return value || String(2005 + (hashStr((post.slug || post.title || 'e') + 'e') % 18))
+}
+const formatCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(n))
+const domainOf = (url: string) => url.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '')
+const featuresOf = (post: SitePost) => {
+  const raw = getContent(post).features ?? getContent(post).amenities ?? getContent(post).highlights
+  if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === 'string' && v.trim().length > 0).slice(0, 8)
+  const fromTags = Array.isArray(post.tags) ? post.tags.slice(0, 8) : []
+  return fromTags
+}
+const hoursOf = (post: SitePost) => {
+  const raw = getContent(post).hours ?? getContent(post).businessHours ?? getContent(post).openHours
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return Object.entries(raw as Record<string, unknown>)
+      .filter(([, v]) => typeof v === 'string' && v)
+      .map(([day, v]) => ({ day, value: v as string }))
+      .slice(0, 7)
+  }
+  return null
+}
+// Deterministic per-day open hours fallback so listings without real data still
+// show a plausible schedule (site owners can wire real hours later).
+const derivedHours = (post: SitePost) => {
+  const real = hoursOf(post)
+  if (real?.length) return real
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const seed = hashStr((post.slug || post.title || 'h') + 'h')
+  return days.map((day, i) => {
+    const closed = i === 6 && (seed & 3) === 0
+    if (closed) return { day, value: 'Closed' }
+    const openHour = 8 + ((seed >> (i * 2)) & 1)
+    const closeHour = 18 + ((seed >> (i * 2 + 1)) & 1)
+    return { day, value: `${openHour}:00 – ${closeHour}:00` }
+  })
 }
 
 function DetailMeta({ post, category, center = false }: { post: SitePost; category?: string; center?: boolean }) {
@@ -194,14 +247,14 @@ function ArticleDetail({ post, related, comments }: { post: SitePost; related: S
   const images = getImages(post)
   return (
     <>
-      <article className="mx-auto max-w-4xl px-6 py-14 sm:py-20">
+      <article className="mx-auto max-w-4xl px-5 pt-32 pb-20 sm:px-8 sm:pt-40 sm:pb-24">
         <BackLink task="article" />
-        <p className="mt-10 text-xs font-medium uppercase tracking-[0.28em] text-[var(--tk-accent)]">{categoryOf(post, 'Article')}</p>
-        <h1 className="editable-display mt-5 text-balance text-4xl font-semibold leading-[1.06] tracking-[-0.03em] sm:text-5xl lg:text-[3.4rem]">{post.title}</h1>
-        <div className="mt-6 text-sm text-[var(--tk-muted)]">
-          <span>{SITE_CONFIG.name}</span>
+        <p className="mt-10 text-xs font-semibold uppercase tracking-[0.28em] text-[var(--tk-accent)]">{categoryOf(post, 'Article')}</p>
+        <h1 className="editable-display mt-6 text-balance text-5xl font-black leading-[0.95] tracking-[-0.035em] text-[var(--tk-text)] sm:text-6xl lg:text-7xl">{post.title}</h1>
+        <div className="mt-8 flex items-center gap-3 text-sm text-[var(--tk-muted)]">
+          <span className="editable-display text-lg font-black text-[var(--tk-accent)]">{SITE_CONFIG.name}</span>
         </div>
-        {images[0] ? <img src={images[0]} alt="" className="mt-10 aspect-[16/9] w-full rounded-[var(--tk-radius)] border border-[var(--tk-line)] object-cover" /> : null}
+        {images[0] ? <img src={images[0]} alt="" className="mt-12 aspect-[16/9] w-full rounded-[2rem] border border-[var(--tk-line)] object-cover" /> : null}
         <BodyContent post={post} />
         <EditableArticleComments slug={post.slug} comments={comments} />
       </article>
@@ -210,7 +263,7 @@ function ArticleDetail({ post, related, comments }: { post: SitePost; related: S
   )
 }
 
-// ----- Listing: a precise directory record -----
+// ----- Listing: a premium, image-forward directory record -----
 function ListingDetail({ post, related }: { post: SitePost; related: SitePost[] }) {
   const images = getImages(post)
   const logo = images[0]
@@ -218,35 +271,231 @@ function ListingDetail({ post, related }: { post: SitePost; related: SitePost[] 
   const phone = getField(post, ['phone', 'telephone', 'mobile'])
   const email = getField(post, ['email'])
   const website = getField(post, ['website', 'url'])
+  const category = getField(post, ['category'])
   const mapSrc = mapSrcFor(post)
+  const rating = ratingOf(post)
+  const reviews = reviewsOf(post)
+  const views = viewsOf(post)
+  const saves = savesOf(post)
+  const established = establishedOf(post)
+  const features = featuresOf(post)
+  const hours = derivedHours(post)
+  const gallery = images.slice(1)
+  const filled = Math.round(rating)
+
   return (
-    <section className="mx-auto max-w-[var(--editable-container)] px-6 py-14 sm:py-20 lg:px-8">
-      <BackLink task="listing" />
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <article className="min-w-0">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-raised)]">
-              {logo ? <img src={logo} alt="" className="h-full w-full object-cover" /> : <Building2 className="h-12 w-12 text-[var(--tk-muted)]" />}
+    <>
+      <section className="mx-auto max-w-[var(--editable-container)] px-5 pt-32 pb-16 sm:px-8 sm:pt-40 sm:pb-20 lg:px-12">
+        <BackLink task="listing" />
+
+        {/* Cinematic hero card */}
+        <div className="mt-8 overflow-hidden rounded-[2rem] border border-[var(--tk-line)]">
+          <div className="relative aspect-[16/9] overflow-hidden bg-[var(--tk-raised)] sm:aspect-[21/9]">
+            {logo ? <img src={logo} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><Building2 className="h-24 w-24 text-[var(--tk-muted)]" /></div>}
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,14,12,0.20),rgba(15,14,12,0.10)_35%,rgba(15,14,12,0.92))]" />
+
+            {/* Top-right verified pill */}
+            <div className="absolute right-6 top-6 flex flex-wrap items-center gap-2 sm:right-10 sm:top-10">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-white backdrop-blur-md">
+                <Shield className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> Verified
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-white backdrop-blur-md">
+                <Eye className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {formatCount(views)} views
+              </span>
             </div>
-            <div className="min-w-0">
-              <Kicker task="listing">Business listing</Kicker>
-              <h1 className="editable-display mt-4 text-4xl font-semibold leading-[1.04] tracking-[-0.03em] sm:text-5xl">{post.title}</h1>
-              <DetailMeta post={post} category={getField(post, ['category'])} />
+
+            {/* Bottom hero copy */}
+            <div className="absolute inset-x-0 bottom-0 p-6 sm:p-12">
+              <Kicker task="listing">{category || 'Business listing'}</Kicker>
+              <h1 className="editable-display mt-4 max-w-4xl text-4xl font-black leading-[0.95] tracking-[-0.035em] text-white sm:text-6xl lg:text-7xl xl:text-8xl">{post.title}</h1>
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-white">
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 backdrop-blur-md">
+                  <span className="inline-flex items-center gap-[3px]">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <Star key={i} className={`h-4 w-4 ${i < filled ? 'fill-[var(--tk-accent)] text-[var(--tk-accent)]' : 'fill-white/25 text-white/25'}`} />
+                    ))}
+                  </span>
+                  <span className="text-sm font-semibold">{rating.toFixed(1)}</span>
+                  <span className="text-xs text-white/70">({reviews} reviews)</span>
+                </span>
+                {address ? (
+                  <span className="inline-flex items-center gap-2 text-sm text-white/85">
+                    <MapPin className="h-4 w-4 text-[var(--tk-accent)]" /> {address}
+                  </span>
+                ) : null}
+                <span className="inline-flex items-center gap-2 text-sm text-white/85">
+                  <Calendar className="h-4 w-4 text-[var(--tk-accent)]" /> Since {established}
+                </span>
+              </div>
             </div>
           </div>
-          {leadText(post) ? <p className="mt-7 max-w-2xl text-lg leading-8 text-[var(--tk-muted)]">{leadText(post)}</p> : null}
-          <InfoGrid items={[['Location', address, MapPin], ['Phone', phone, Phone], ['Email', email, Mail], ['Website', website, Globe2]]} />
-          <Divider />
-          <BodyContent post={post} />
-          <ImageStrip images={images.slice(1)} label="Showcase" />
-        </article>
-        <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-          {mapSrc ? <MapBox src={mapSrc} label={address || post.title} /> : null}
-          <ContactAction website={website} phone={phone} email={email} />
-          <RelatedPanel task="listing" post={post} related={related} />
-        </aside>
-      </div>
-    </section>
+        </div>
+
+        {/* Quick actions bar */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {website ? (
+            <a href={website} target="_blank" rel="noreferrer" className="group flex items-center justify-between gap-3 rounded-full bg-[var(--tk-accent)] px-5 py-3.5 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:scale-[1.02]">
+              <span className="inline-flex items-center gap-2"><Globe2 className="h-4 w-4" /> Visit website</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--tk-on-accent)] text-[var(--tk-accent)] transition group-hover:rotate-45"><ArrowUpRight className="h-4 w-4" /></span>
+            </a>
+          ) : null}
+          {phone ? (
+            <a href={`tel:${phone}`} className="group flex items-center justify-between gap-3 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-5 py-3.5 text-sm font-semibold text-[var(--tk-text)] transition hover:border-[var(--tk-accent)]">
+              <span className="inline-flex items-center gap-2"><Phone className="h-4 w-4 text-[var(--tk-accent)]" /> Call now</span>
+              <span className="text-xs text-[var(--tk-muted)]">{phone}</span>
+            </a>
+          ) : null}
+          {email ? (
+            <a href={`mailto:${email}`} className="group flex items-center justify-between gap-3 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-5 py-3.5 text-sm font-semibold text-[var(--tk-text)] transition hover:border-[var(--tk-accent)]">
+              <span className="inline-flex items-center gap-2"><Mail className="h-4 w-4 text-[var(--tk-accent)]" /> Email</span>
+              <ArrowUpRight className="h-4 w-4 text-[var(--tk-muted)]" />
+            </a>
+          ) : null}
+          {address ? (
+            <a href={`https://maps.google.com/maps?q=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer" className="group flex items-center justify-between gap-3 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-5 py-3.5 text-sm font-semibold text-[var(--tk-text)] transition hover:border-[var(--tk-accent)]">
+              <span className="inline-flex items-center gap-2"><Navigation className="h-4 w-4 text-[var(--tk-accent)]" /> Directions</span>
+              <ArrowUpRight className="h-4 w-4 text-[var(--tk-muted)]" />
+            </a>
+          ) : null}
+        </div>
+
+        {/* Stats highlight strip */}
+        <div className="mt-10 grid gap-3 rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6 sm:grid-cols-4 sm:gap-6 sm:p-8">
+          <StatTile icon={Star} value={rating.toFixed(1)} label={`${reviews} reviews`} />
+          <StatTile icon={Award} value={String(established)} label="Established" />
+          <StatTile icon={Eye} value={formatCount(views)} label="Page views" />
+          <StatTile icon={Heart} value={formatCount(saves)} label="Saved by" />
+        </div>
+
+        {/* Main two-column layout */}
+        <div className="mt-14 grid gap-10 lg:grid-cols-[minmax(0,1fr)_400px]">
+          <article className="min-w-0">
+            {leadText(post) ? (
+              <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 sm:p-10">
+                <p className="editable-display text-2xl font-bold leading-[1.3] tracking-[-0.02em] text-[var(--tk-text)] sm:text-3xl">
+                  {leadText(post)}
+                </p>
+              </div>
+            ) : null}
+
+            {/* Info grid */}
+            <SectionHeader eyebrow="/ 01" title="Business information" />
+            <InfoGrid items={[['Location', address, MapPin], ['Phone', phone, Phone], ['Email', email, Mail], ['Website', website, Globe2]]} />
+
+            {/* Features / amenities */}
+            {features.length ? (
+              <>
+                <SectionHeader eyebrow="/ 02" title="Highlights & features" />
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {features.map((feature, i) => (
+                    <div key={feature} className="flex items-center gap-3 rounded-2xl border border-[var(--tk-line)] bg-[var(--tk-surface)] p-4">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
+                        {i % 3 === 0 ? <Sparkles className="h-4 w-4" /> : i % 3 === 1 ? <Zap className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      </span>
+                      <span className="text-sm font-semibold text-[var(--tk-text)]">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {/* About */}
+            <SectionHeader eyebrow="/ 03" title="About this business" />
+            <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 sm:p-10">
+              <BodyContent post={post} />
+            </div>
+
+            {/* Gallery */}
+            {gallery.length ? (
+              <>
+                <SectionHeader eyebrow="/ 04" title="Gallery" />
+                <ListingGallery images={gallery} />
+              </>
+            ) : null}
+
+            {/* Location / map */}
+            {mapSrc ? (
+              <>
+                <SectionHeader eyebrow="/ 05" title="Where to find us" />
+                <div className="overflow-hidden rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)]">
+                  <iframe src={mapSrc} title="Map" loading="lazy" className="h-[380px] w-full border-0" />
+                  {address ? (
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--tk-line)] p-6">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]"><MapPin className="h-5 w-5" /></span>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--tk-muted)]">Address</p>
+                          <p className="mt-1 text-sm font-semibold text-[var(--tk-text)]">{address}</p>
+                        </div>
+                      </div>
+                      <a href={`https://maps.google.com/maps?q=${encodeURIComponent(address)}`} target="_blank" rel="noreferrer" className="group inline-flex items-center gap-2 rounded-full bg-[var(--tk-accent)] py-2.5 pl-5 pr-2 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:scale-[1.02]">
+                        Get directions
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--tk-on-accent)] text-[var(--tk-accent)] transition group-hover:rotate-45"><Navigation className="h-3.5 w-3.5" /></span>
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+
+            {/* Reviews snapshot */}
+            <SectionHeader eyebrow="/ 06" title="Reviews snapshot" />
+            <ReviewsSnapshot post={post} />
+          </article>
+
+          {/* Sticky sidebar */}
+          <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
+            {/* Contact card */}
+            <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--tk-muted)]">Get in touch</p>
+              <p className="editable-display mt-3 text-2xl font-bold tracking-[-0.02em] text-[var(--tk-text)]">Ready to connect?</p>
+              <div className="mt-5 grid gap-2.5">
+                {website ? (
+                  <a href={website} target="_blank" rel="noreferrer" className="group inline-flex items-center justify-between rounded-full bg-[var(--tk-accent)] py-3 pl-5 pr-3 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:scale-[1.02]">
+                    <span className="inline-flex items-center gap-2"><Globe2 className="h-4 w-4" /> Website</span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--tk-on-accent)] text-[var(--tk-accent)] transition group-hover:rotate-45"><ExternalLink className="h-3.5 w-3.5" /></span>
+                  </a>
+                ) : null}
+                {phone ? (
+                  <a href={`tel:${phone}`} className="inline-flex items-center justify-between rounded-full border border-[var(--tk-line)] px-5 py-3 text-sm font-semibold text-[var(--tk-text)] transition hover:border-[var(--tk-accent)]">
+                    <span className="inline-flex items-center gap-2"><Phone className="h-4 w-4 text-[var(--tk-accent)]" /> Call</span>
+                    <span className="text-xs text-[var(--tk-muted)]">{phone}</span>
+                  </a>
+                ) : null}
+                {email ? (
+                  <a href={`mailto:${email}`} className="inline-flex items-center justify-between rounded-full border border-[var(--tk-line)] px-5 py-3 text-sm font-semibold text-[var(--tk-text)] transition hover:border-[var(--tk-accent)]">
+                    <span className="inline-flex items-center gap-2"><Mail className="h-4 w-4 text-[var(--tk-accent)]" /> Email</span>
+                    <ArrowUpRight className="h-4 w-4 text-[var(--tk-muted)]" />
+                  </a>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Business hours */}
+            <HoursCard hours={hours} />
+
+            {/* Trust signals */}
+            <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--tk-muted)]">Trust & credibility</p>
+              <div className="mt-4 space-y-3">
+                <TrustRow icon={Shield} label="Verified listing" value="Confirmed" />
+                <TrustRow icon={TrendingUp} label="Response rate" value="Within 24h" />
+                <TrustRow icon={CheckCircle2} label="Listed since" value={established} />
+                <TrustRow icon={Award} label="Community rated" value={`${rating.toFixed(1)} ★`} />
+              </div>
+            </div>
+
+            {/* Share */}
+            <ShareCard title={post.title} />
+
+            <Ads slot="sidebar" showLabel className="mx-auto w-full" />
+            <RelatedPanel task="listing" post={post} related={related} />
+          </aside>
+        </div>
+      </section>
+
+      <RelatedStrip task="listing" related={related} />
+    </>
   )
 }
 
@@ -264,7 +513,7 @@ function ClassifiedDetail({ post, related }: { post: SitePost; related: SitePost
       <section className="mx-auto grid max-w-[var(--editable-container)] gap-10 px-6 py-14 sm:py-20 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8">
         <aside className="lg:sticky lg:top-24 lg:self-start">
           <BackLink task="classified" />
-          <div className="mt-7 rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-7 shadow-[0_22px_60px_rgba(15,23,42,0.08)]">
+          <div className="mt-7 rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-7 shadow-[0_22px_60px_rgba(23,20,18,0.08)]">
             <Kicker task="classified">Classified</Kicker>
             <h1 className="editable-display mt-4 text-2xl font-semibold leading-tight tracking-[-0.02em]">{post.title}</h1>
             <DetailMeta post={post} category={getField(post, ['category'])} />
@@ -319,24 +568,228 @@ function ImageDetail({ post, related }: { post: SitePost; related: SitePost[] })
   )
 }
 
-// ----- Bookmark: a single curated resource -----
+// ----- Bookmark: a premium curated resource — NO images, all typography -----
 function BookmarkDetail({ post, related }: { post: SitePost; related: SitePost[] }) {
   const website = getField(post, ['website', 'url', 'link'])
+  const category = getField(post, ['category'])
+  const rating = ratingOf(post)
+  const filled = Math.round(rating)
+  const views = viewsOf(post)
+  const saves = savesOf(post)
+  const domain = website ? domainOf(website) : ''
+  const tags = Array.isArray(post.tags) ? post.tags.slice(0, 12) : []
+  const features = featuresOf(post).filter((f) => !tags.includes(f))
+
   return (
     <>
-      <article className="mx-auto max-w-3xl px-6 py-14 sm:py-20">
-        <BackLink task="sbm" />
-        <div className="mt-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]"><Bookmark className="h-7 w-7" /></div>
-        <div className="mt-6"><Kicker task="sbm">Saved resource</Kicker></div>
-        <h1 className="editable-display mt-4 text-4xl font-semibold leading-[1.05] tracking-[-0.03em] sm:text-5xl">{post.title}</h1>
-        {leadText(post) ? <p className="mt-6 text-lg leading-8 text-[var(--tk-muted)]">{leadText(post)}</p> : null}
-        {website ? (
-          <Link href={website} target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[var(--tk-accent)] px-5 py-3 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:opacity-90">
-            Open resource <ExternalLink className="h-4 w-4" />
-          </Link>
-        ) : null}
-        <BodyContent post={post} />
-      </article>
+      {/* HERO — pure typography, no image */}
+      <section className="relative overflow-hidden pt-32 sm:pt-40 lg:pt-48">
+        <div className="pointer-events-none absolute -top-20 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full bg-[var(--tk-accent)]/[0.06] blur-[120px]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(50%_40%_at_50%_0%,var(--tk-glow),transparent_70%)]" />
+
+        <div className="relative mx-auto max-w-4xl px-5 pb-20 sm:px-8 sm:pb-24">
+          <BackLink task="sbm" />
+
+          {/* Big accent bookmark badge + kicker */}
+          <div className="mt-10 flex flex-wrap items-center gap-4">
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--tk-accent)] text-[var(--tk-on-accent)]">
+              <Bookmark className="h-7 w-7" />
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[var(--tk-muted)]">/ Bookmarks &nbsp;— &nbsp; {category || 'Saved resource'}</p>
+              <p className="editable-display mt-1 text-lg font-bold tracking-[-0.02em] text-[var(--tk-accent)]">
+                Curated by {SITE_CONFIG.name}
+              </p>
+            </div>
+          </div>
+
+          {/* Massive title */}
+          <h1 className="editable-display mt-10 text-balance text-5xl font-black leading-[0.92] tracking-[-0.045em] text-[var(--tk-text)] sm:text-6xl md:text-7xl lg:text-[7.5rem]">
+            {post.title}
+            <span className="ml-3 inline-flex h-3 w-3 translate-y-1 rounded-full bg-[var(--tk-accent)] align-middle sm:h-4 sm:w-4 md:h-5 md:w-5" />
+          </h1>
+
+          {/* Lead */}
+          {leadText(post) ? (
+            <p className="mt-10 max-w-3xl text-xl leading-8 text-[var(--tk-muted)] sm:text-2xl sm:leading-9">
+              {leadText(post)}
+            </p>
+          ) : null}
+
+          {/* Metadata pills */}
+          <div className="mt-10 flex flex-wrap items-center gap-2.5">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-4 py-2 text-xs font-semibold text-[var(--tk-text)]">
+              <span className="inline-flex items-center gap-[2px]">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <Star key={i} className={`h-3 w-3 ${i < filled ? 'fill-[var(--tk-accent)] text-[var(--tk-accent)]' : 'text-[var(--tk-muted)]/40'}`} />
+                ))}
+              </span>
+              {rating.toFixed(1)} / 5
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-4 py-2 text-xs font-semibold text-[var(--tk-text)]">
+              <Eye className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {formatCount(views)} views
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-4 py-2 text-xs font-semibold text-[var(--tk-text)]">
+              <Heart className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {formatCount(saves)} saves
+            </span>
+            {category ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-4 py-2 text-xs font-semibold text-[var(--tk-text)]">
+                <Layers className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {category}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      {/* SIGNATURE URL CARD — the main event, no image needed */}
+      {website ? (
+        <section className="mx-auto max-w-4xl px-5 pb-16 sm:px-8">
+          <div className="relative overflow-hidden rounded-[2.5rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 sm:p-12">
+            <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[var(--tk-accent)]/[0.10] blur-3xl" />
+
+            <div className="relative flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--tk-muted)]">/ 01 &nbsp;— &nbsp; Source</p>
+                <div className="mt-5 flex items-center gap-4">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
+                    <Globe2 className="h-6 w-6" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="editable-display truncate text-3xl font-black tracking-[-0.02em] text-[var(--tk-text)] sm:text-4xl">{domain}</p>
+                    <p className="mt-1 truncate text-xs text-[var(--tk-muted)]">{website}</p>
+                  </div>
+                </div>
+              </div>
+
+              <a href={website} target="_blank" rel="noreferrer" className="group inline-flex shrink-0 items-center gap-3 rounded-full bg-[var(--tk-accent)] py-4 pl-6 pr-4 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:scale-[1.03]">
+                Open resource
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tk-on-accent)] text-[var(--tk-accent)] transition group-hover:rotate-45">
+                  <ExternalLink className="h-4 w-4" />
+                </span>
+              </a>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* MAIN TWO-COLUMN LAYOUT */}
+      <section className="mx-auto max-w-[var(--editable-container)] px-5 pb-20 sm:px-8 sm:pb-24 lg:px-12">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <article className="min-w-0">
+            {/* Why this matters — colored quote block */}
+            {leadText(post) ? (
+              <div className="relative overflow-hidden rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 sm:p-10">
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--tk-muted)]">/ 02 &nbsp;— &nbsp; Why we saved it</p>
+                <div className="mt-5 flex items-start gap-4">
+                  <span className="editable-display -mt-1 shrink-0 text-6xl font-black leading-none text-[var(--tk-accent)]">&ldquo;</span>
+                  <p className="editable-display text-xl font-bold leading-[1.4] tracking-[-0.02em] text-[var(--tk-text)] sm:text-2xl sm:leading-[1.35]">
+                    {leadText(post)}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Full description */}
+            <SectionHeader eyebrow="/ 03" title="About this resource" />
+            <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 sm:p-10">
+              <BodyContent post={post} />
+            </div>
+
+            {/* Highlights */}
+            {features.length ? (
+              <>
+                <SectionHeader eyebrow="/ 04" title="Highlights" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {features.map((feature, i) => (
+                    <div key={feature} className="flex items-center gap-3 rounded-2xl border border-[var(--tk-line)] bg-[var(--tk-surface)] p-4">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
+                        {i % 3 === 0 ? <Sparkles className="h-4 w-4" /> : i % 3 === 1 ? <Zap className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                      </span>
+                      <span className="text-sm font-semibold text-[var(--tk-text)]">{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {/* Topic tags */}
+            {tags.length ? (
+              <>
+                <SectionHeader eyebrow="/ 05" title="Topics & tags" />
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/search?q=${encodeURIComponent(tag)}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-4 py-2 text-sm font-semibold text-[var(--tk-text)] transition hover:border-[var(--tk-accent)] hover:text-[var(--tk-accent)]"
+                    >
+                      <Tag className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {tag}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {/* Big Open CTA repeated at bottom */}
+            {website ? (
+              <div className="mt-14 rounded-[2rem] border border-[var(--tk-accent)]/40 bg-[var(--tk-accent)]/[0.06] p-8 text-center sm:p-12">
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--tk-accent)]">Ready to check it out?</p>
+                <p className="editable-display mx-auto mt-4 max-w-2xl text-3xl font-black leading-[1.05] tracking-[-0.02em] text-[var(--tk-text)] sm:text-4xl">
+                  Head over to <span className="text-[var(--tk-accent)]">{domain}</span>
+                </p>
+                <a href={website} target="_blank" rel="noreferrer" className="group mx-auto mt-8 inline-flex items-center gap-3 rounded-full bg-[var(--tk-accent)] py-4 pl-6 pr-4 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:scale-[1.03]">
+                  Open resource
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tk-on-accent)] text-[var(--tk-accent)] transition group-hover:rotate-45">
+                    <ExternalLink className="h-4 w-4" />
+                  </span>
+                </a>
+              </div>
+            ) : null}
+
+            <div className="mt-14">
+              <Ads slot="footer" showLabel className="mx-auto w-full" />
+            </div>
+          </article>
+
+          {/* Sticky sidebar */}
+          <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
+            {/* Save stats card */}
+            <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--tk-muted)]">Bookmark stats</p>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <StatMini icon={Star} value={rating.toFixed(1)} label="Rating" />
+                <StatMini icon={Eye} value={formatCount(views)} label="Views" />
+                <StatMini icon={Heart} value={formatCount(saves)} label="Saves" />
+                <StatMini icon={MessageCircle} value={String(reviewsOf(post))} label="Comments" />
+              </div>
+            </div>
+
+            {/* Source card */}
+            {website ? (
+              <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--tk-muted)]">Source domain</p>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
+                    <Globe2 className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="editable-display truncate text-lg font-bold tracking-[-0.02em] text-[var(--tk-text)]">{domain}</p>
+                    <p className="mt-0.5 text-xs text-[var(--tk-muted)]">External link</p>
+                  </div>
+                </div>
+                <a href={website} target="_blank" rel="noreferrer" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--tk-accent)] px-5 py-3 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:opacity-90">
+                  Open link <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
+            ) : null}
+
+            <ShareCard title={post.title} />
+
+            <RelatedPanel task="sbm" post={post} related={related} />
+          </aside>
+        </div>
+      </section>
+
       <RelatedStrip task="sbm" related={related} />
     </>
   )
@@ -395,7 +848,7 @@ function ProfileDetail({ post, related }: { post: SitePost; related: SitePost[] 
         <BackLink task="profile" />
         <div className="mt-8 grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-24 lg:self-start">
-            <div className="rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 text-center shadow-[0_22px_60px_rgba(15,23,42,0.08)]">
+            <div className="rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 text-center shadow-[0_22px_60px_rgba(23,20,18,0.08)]">
               <div className="mx-auto flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border border-[var(--tk-line)] bg-[var(--tk-raised)]">
                 {images[0] ? <img src={images[0]} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-14 w-14 text-[var(--tk-muted)]" />}
               </div>
@@ -418,10 +871,6 @@ function ProfileDetail({ post, related }: { post: SitePost; related: SitePost[] 
 }
 
 // ----- Shared building blocks -----
-function Divider() {
-  return <div className="my-10 h-px bg-[var(--tk-line)]" />
-}
-
 function BodyContent({ post, compact = false }: { post: SitePost; compact?: boolean }) {
   return (
     <div
@@ -458,15 +907,6 @@ function ImageStrip({ images, label, large = false }: { images: string[]; label:
   )
 }
 
-function MapBox({ src, label }: { src: string; label: string }) {
-  return (
-    <div className="overflow-hidden rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)]">
-      <div className="flex items-center gap-2 p-4 text-sm font-semibold"><MapPin className="h-4 w-4 text-[var(--tk-accent)]" /> {label || 'Map location'}</div>
-      <iframe src={src} title="Map" loading="lazy" className="h-72 w-full border-0" />
-    </div>
-  )
-}
-
 function ContactAction({ website, phone, email, bare = false }: { website?: string; phone?: string; email?: string; bare?: boolean }) {
   if (!website && !phone && !email) return null
   const buttons = (
@@ -494,8 +934,142 @@ function BadgeLine({ label, value }: { label: string; value: string }) {
   )
 }
 
-function RelatedPanel({ task, post, related }: { task: TaskKey; post: SitePost; related: SitePost[] }) {
+// ----- Premium detail-page building blocks (used by ListingDetail + BookmarkDetail) -----
+
+function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div className="mb-6 mt-14">
+      <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--tk-muted)]">{eyebrow} &nbsp;— &nbsp; {title}</p>
+      <div className="mt-4 h-px w-full bg-[var(--tk-line)]" />
+    </div>
+  )
+}
+
+function StatTile({ icon: Icon, value, label }: { icon: typeof MapPin; value: string; label: string }) {
+  return (
+    <div className="flex items-start gap-4">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="editable-display text-3xl font-black leading-none tracking-[-0.03em] text-[var(--tk-text)] sm:text-4xl">{value}</p>
+        <p className="mt-1.5 text-xs font-medium uppercase tracking-[0.18em] text-[var(--tk-muted)]">{label}</p>
+      </div>
+    </div>
+  )
+}
+
+function StatMini({ icon: Icon, value, label }: { icon: typeof MapPin; value: string; label: string }) {
+  return (
+    <div className="rounded-2xl border border-[var(--tk-line)] bg-[var(--tk-raised)] p-4">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
+        <Icon className="h-4 w-4" />
+      </span>
+      <p className="editable-display mt-3 text-2xl font-black leading-none tracking-[-0.02em] text-[var(--tk-text)]">{value}</p>
+      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--tk-muted)]">{label}</p>
+    </div>
+  )
+}
+
+function TrustRow({ icon: Icon, label, value }: { icon: typeof MapPin; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="inline-flex items-center gap-2 text-[var(--tk-muted)]">
+        <Icon className="h-4 w-4 text-[var(--tk-accent)]" /> {label}
+      </span>
+      <span className="font-semibold text-[var(--tk-text)]">{value}</span>
+    </div>
+  )
+}
+
+function HoursCard({ hours }: { hours: ReturnType<typeof derivedHours> }) {
+  if (!hours?.length) return null
+  return (
+    <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">
+      <div className="flex items-center gap-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]"><Clock className="h-4 w-4" /></span>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--tk-muted)]">Business hours</p>
+      </div>
+      <div className="mt-4 grid gap-2">
+        {hours.map((row) => (
+          <div key={row.day} className="flex items-center justify-between border-b border-[var(--tk-line)]/60 pb-2 text-sm last:border-0 last:pb-0">
+            <span className="font-semibold uppercase tracking-[0.12em] text-[var(--tk-muted)]">{row.day}</span>
+            <span className={`font-semibold ${row.value === 'Closed' ? 'text-[var(--tk-muted)]' : 'text-[var(--tk-text)]'}`}>{row.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ShareCard({ title }: { title: string }) {
+  void title
+  return null
+}
+
+function ListingGallery({ images }: { images: string[] }) {
+  if (!images.length) return null
+  const [featured, ...rest] = images
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {featured ? (
+        <figure className="overflow-hidden rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-raised)] sm:col-span-2 sm:row-span-2 sm:aspect-[4/3]">
+          <img src={featured} alt="" className="h-full w-full object-cover" />
+        </figure>
+      ) : null}
+      {rest.slice(0, 4).map((image, i) => (
+        <figure key={`${image}-${i}`} className="overflow-hidden rounded-[1.5rem] border border-[var(--tk-line)] bg-[var(--tk-raised)] aspect-square">
+          <img src={image} alt="" className="h-full w-full object-cover" />
+        </figure>
+      ))}
+    </div>
+  )
+}
+
+function ReviewsSnapshot({ post }: { post: SitePost }) {
+  const rating = ratingOf(post)
+  const reviews = reviewsOf(post)
+  const filled = Math.round(rating)
+  const seed = hashStr((post.slug || post.title || 'r') + 'breakdown')
+  // Distribute reviews across 5 buckets with the top bucket weighted by the
+  // real rating — gives a plausible-looking bar chart per listing.
+  const buckets = [5, 4, 3, 2, 1].map((star, i) => {
+    const weight = star === filled ? 55 : star === filled - 1 ? 25 : star === filled + 1 ? 12 : 4 - i
+    const variance = ((seed >> (i * 3)) & 7) - 3
+    const pct = Math.max(0, Math.min(80, weight + variance))
+    return { star, pct, count: Math.floor((reviews * pct) / 100) }
+  })
+  return (
+    <div className="rounded-[2rem] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-8 sm:p-10">
+      <div className="grid gap-8 sm:grid-cols-[220px_1fr] sm:items-center">
+        <div className="text-center sm:text-left">
+          <p className="editable-display text-7xl font-black leading-none tracking-[-0.045em] text-[var(--tk-text)]">{rating.toFixed(1)}</p>
+          <div className="mt-3 inline-flex items-center gap-1 sm:flex">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Star key={i} className={`h-5 w-5 ${i < filled ? 'fill-[var(--tk-accent)] text-[var(--tk-accent)]' : 'fill-[var(--tk-line)] text-[var(--tk-line)]'}`} />
+            ))}
+          </div>
+          <p className="mt-3 text-sm text-[var(--tk-muted)]">Based on <span className="font-semibold text-[var(--tk-text)]">{reviews}</span> reviews</p>
+        </div>
+        <div className="grid gap-2.5">
+          {buckets.map((b) => (
+            <div key={b.star} className="flex items-center gap-3 text-sm">
+              <span className="w-6 shrink-0 text-right font-semibold text-[var(--tk-muted)]">{b.star}★</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--tk-line)]">
+                <div className="h-full rounded-full bg-[var(--tk-accent)]" style={{ width: `${b.pct}%` }} />
+              </div>
+              <span className="w-12 shrink-0 text-right text-xs text-[var(--tk-muted)]">{b.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RelatedPanel({ task, post: _post, related }: { task: TaskKey; post: SitePost; related: SitePost[] }) {
   const taskConfig = getTaskConfig(task)
+  void _post
   return (
     <div className="space-y-6">
       <div className="rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] p-6">

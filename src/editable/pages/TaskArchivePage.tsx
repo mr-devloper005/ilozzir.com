@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowUpRight, BriefcaseBusiness, ChevronDown, Download, FileText, Globe, MapPin, Phone, Search, Star, UserRound } from 'lucide-react'
+import { ArrowUpRight, BriefcaseBusiness, ChevronDown, Download, FileText, Globe, MapPin, Search, Star, UserRound } from 'lucide-react'
 import { buildTaskMetadata } from '@/lib/seo'
 import { CATEGORY_OPTIONS, normalizeCategory } from '@/lib/categories'
 import { fetchPaginatedTaskPosts, buildPostUrl } from '@/lib/task-data'
@@ -8,7 +8,9 @@ import type { SiteFeedPagination, SitePost } from '@/lib/site-connector'
 import { taskPageMetadata } from '@/config/site.content'
 import { taskPageVoices } from '@/editable/content/task-pages.content'
 import { EditableSiteShell } from '@/editable/shell/EditableSiteShell'
+import { EditableReveal } from '@/editable/shell/EditableReveal'
 import { getTaskTheme, taskThemeStyle } from '@/editable/theme/task-themes'
+import { Ads } from '@/lib/ads'
 
 export const revalidate = 3
 
@@ -56,17 +58,17 @@ function pageHref(basePath: string, category: string, page: number) {
 }
 
 const taskGrid: Record<TaskKey, string> = {
-  article: 'grid gap-7 md:grid-cols-2 xl:grid-cols-3',
-  listing: 'grid gap-5 xl:grid-cols-2',
-  classified: 'grid gap-5 sm:grid-cols-2 xl:grid-cols-3',
-  image: 'columns-1 gap-5 [column-fill:_balance] sm:columns-2 xl:columns-3',
-  sbm: 'grid gap-5 md:grid-cols-2 xl:grid-cols-3',
-  pdf: 'grid gap-5 md:grid-cols-2 xl:grid-cols-3',
-  profile: 'grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+  article: 'grid gap-4 md:grid-cols-2 xl:grid-cols-3',
+  listing: 'grid gap-4 md:grid-cols-2 xl:grid-cols-3',
+  classified: 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3',
+  image: 'columns-1 gap-4 [column-fill:_balance] sm:columns-2 xl:columns-3',
+  sbm: 'grid gap-4 md:grid-cols-2 xl:grid-cols-3',
+  pdf: 'grid gap-4 md:grid-cols-2 xl:grid-cols-3',
+  profile: 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 }
 
-// Shared premium surface: hairline border, soft radius, smooth lift on hover.
-const cardBase = 'group block rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] transition duration-500 hover:-translate-y-1.5 hover:shadow-[0_32px_72px_rgba(15,23,42,0.14)]'
+// Shared premium surface: dark cinematic card with soft border, big radius, lift.
+const cardBase = 'group block rounded-[var(--tk-radius)] border border-[var(--tk-line)] bg-[var(--tk-surface)] transition duration-500 hover:-translate-y-1 hover:border-[var(--tk-accent)]/40'
 
 export async function EditableTaskArchiveRoute({
   task,
@@ -96,36 +98,36 @@ export function TaskArchiveView({ task, posts, pagination, category, basePath }:
   return (
     <EditableSiteShell>
       <main style={taskThemeStyle(task)} className="min-h-screen bg-[var(--tk-bg)] text-[var(--tk-text)]">
-        <header className="relative overflow-hidden border-b border-[var(--tk-line)]">
-          <div className="pointer-events-none absolute inset-x-0 -top-40 h-96 bg-[radial-gradient(60%_60%_at_50%_0%,var(--tk-glow),transparent_70%)]" />
-          <div className="relative mx-auto max-w-[var(--editable-container)] px-6 py-20 sm:py-28 lg:px-8">
-            <div className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.34em] text-[var(--tk-accent)]">
-              <span>{theme.kicker}</span>
-              <span className="h-1 w-1 rounded-full bg-[var(--tk-accent)] opacity-50" />
-              <span className="text-[var(--tk-muted)]">{label}</span>
+        <header className="relative overflow-hidden border-b border-[var(--tk-line)] pt-32 sm:pt-40 lg:pt-48">
+          <div className="pointer-events-none absolute -top-40 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full bg-[var(--tk-accent)]/[0.06] blur-[120px]" />
+          <div className="relative mx-auto max-w-[var(--editable-container)] px-5 pb-20 sm:px-8 sm:pb-24 lg:px-12">
+            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.32em] text-[var(--tk-muted)]">
+              <span className="inline-flex h-2 w-2 rounded-full bg-[var(--tk-accent)]" />
+              <span>/ {String(page).padStart(3, '0')} &nbsp;— &nbsp; {theme.kicker}</span>
             </div>
-            <h1 className="editable-display mt-6 max-w-3xl text-balance text-[2.5rem] font-semibold leading-[1.06] tracking-[-0.03em] sm:text-5xl lg:text-6xl">
-              {voice?.headline || `Browse ${label}`}
+            <h1 className="editable-display mt-8 max-w-[16ch] text-balance text-6xl font-black leading-[0.92] tracking-[-0.045em] text-[var(--tk-text)] sm:text-7xl lg:text-[9rem] xl:text-[10.5rem]">
+              {voice?.headline || label}
+              <span className="ml-4 inline-flex h-4 w-4 translate-y-1 rounded-full bg-[var(--tk-accent)] align-middle sm:h-6 sm:w-6 md:h-8 md:w-8" />
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--tk-muted)]">{voice?.description || theme.note}</p>
+            <p className="mt-10 max-w-2xl text-lg leading-8 text-[var(--tk-muted)] sm:text-xl">{voice?.description || theme.note}</p>
             {voice?.chips?.length ? (
               <div className="mt-8 flex flex-wrap gap-2.5">
                 {voice.chips.map((chip) => (
-                  <span key={chip} className="rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-3.5 py-1.5 text-xs font-medium text-[var(--tk-muted)]">{chip}</span>
+                  <span key={chip} className="rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] px-4 py-2 text-xs font-medium text-[var(--tk-muted)]">{chip}</span>
                 ))}
               </div>
             ) : null}
 
-            <div className="mt-12 flex flex-col gap-4 border-t border-[var(--tk-line)] pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-14 flex flex-col gap-4 border-t border-[var(--tk-line)] pt-8 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-[var(--tk-muted)]">
-                <span className="font-semibold text-[var(--tk-text)]">{posts.length}</span> {posts.length === 1 ? 'post' : 'posts'} · {categoryLabel}
+                <span className="editable-display text-2xl font-black tracking-[-0.02em] text-[var(--tk-text)]">{posts.length}</span> {posts.length === 1 ? 'post' : 'posts'} <span className="opacity-60">·</span> {categoryLabel}
               </p>
               <form action={basePath} className="flex items-center gap-2.5">
                 <div className="relative">
                   <select
                     name="category"
                     defaultValue={category}
-                    className="h-11 appearance-none rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] pl-4 pr-10 text-sm font-medium text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
+                    className="h-11 appearance-none rounded-full border border-[var(--tk-line)] bg-[var(--tk-surface)] pl-5 pr-11 text-sm font-medium text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
                     aria-label={voice?.filterLabel || 'Filter category'}
                   >
                     <option value="all">All categories</option>
@@ -133,16 +135,31 @@ export function TaskArchiveView({ task, posts, pagination, category, basePath }:
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--tk-muted)]" />
                 </div>
-                <button className="inline-flex h-11 items-center rounded-full bg-[var(--tk-accent)] px-5 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:opacity-90">Apply</button>
+                <button className="group inline-flex h-11 items-center gap-2 rounded-full bg-[var(--tk-accent)] pl-5 pr-2 text-sm font-semibold text-[var(--tk-on-accent)] transition hover:scale-[1.02]">
+                  Apply
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--tk-on-accent)] text-[var(--tk-accent)]">
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </span>
+                </button>
               </form>
             </div>
           </div>
         </header>
 
         <section className="mx-auto max-w-[var(--editable-container)] px-6 py-16 sm:py-20 lg:px-8">
+          {task === 'listing' ? (
+            <div className="mb-12">
+              <Ads slot="in-feed" showLabel className="mx-auto w-full" />
+            </div>
+          ) : null}
+
           {posts.length ? (
             <div className={taskGrid[task]}>
-              {posts.map((post, index) => <ArchivePostCard key={post.id || post.slug} post={post} task={task} basePath={basePath} index={index} />)}
+              {posts.map((post, index) => (
+                <EditableReveal key={post.id || post.slug} delay={Math.min(index, 8) * 70} className={task === 'listing' || task === 'sbm' ? (index === 0 ? 'sm:col-span-2' : '') : ''}>
+                  <ArchivePostCard post={post} task={task} basePath={basePath} index={index} featured={(task === 'listing' || task === 'sbm') && index === 0} />
+                </EditableReveal>
+              ))}
             </div>
           ) : (
             <div className="mx-auto max-w-xl rounded-[var(--tk-radius)] border border-dashed border-[var(--tk-line)] bg-[var(--tk-surface)] px-8 py-16 text-center">
@@ -151,6 +168,12 @@ export function TaskArchiveView({ task, posts, pagination, category, basePath }:
               <p className="mt-2 text-sm leading-6 text-[var(--tk-muted)]">Try another category, or check back after new {label.toLowerCase()} are published.</p>
             </div>
           )}
+
+          {task === 'sbm' && posts.length ? (
+            <div className="mt-12">
+              <Ads slot="article-bottom" showLabel className="mx-auto w-full" />
+            </div>
+          ) : null}
 
           {posts.length ? (
             <nav className="mt-16 flex items-center justify-center gap-3 text-sm">
@@ -165,28 +188,19 @@ export function TaskArchiveView({ task, posts, pagination, category, basePath }:
   )
 }
 
-function ArchivePostCard({ post, task, basePath, index }: { post: SitePost; task: TaskKey; basePath: string; index: number }) {
+function ArchivePostCard({ post, task, basePath, index, featured = false }: { post: SitePost; task: TaskKey; basePath: string; index: number; featured?: boolean }) {
   const href = `${basePath}/${post.slug}` || buildPostUrl(task, post.slug)
-  if (task === 'listing') return <ListingArchiveCard post={post} href={href} />
+  if (task === 'listing') return <ListingArchiveCard post={post} href={href} index={index} featured={featured} />
   if (task === 'classified') return <ClassifiedArchiveCard post={post} href={href} />
   if (task === 'image') return <ImageArchiveCard post={post} href={href} index={index} />
-  if (task === 'sbm') return <BookmarkArchiveCard post={post} href={href} index={index} />
+  if (task === 'sbm') return <BookmarkArchiveCard post={post} href={href} index={index} featured={featured} />
   if (task === 'pdf') return <PdfArchiveCard post={post} href={href} />
   if (task === 'profile') return <ProfileArchiveCard post={post} href={href} />
   return <ArticleArchiveCard post={post} href={href} index={index} />
 }
 
-function CardArrow({ label }: { label: string }) {
-  return (
-    <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--tk-accent)]">
-      {label}
-      <ArrowUpRight className="h-4 w-4 transition duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-    </span>
-  )
-}
-
-// Yelp-style red star ratings. Prefers real rating/review fields, falls back to
-// a stable derived value so the UI always reads well (wire to real data later).
+// Star ratings. Prefers real rating/review fields, falls back to a stable
+// derived value so the UI always reads well (wire to real data later).
 const hashStr = (value: string) => {
   let h = 0
   for (let i = 0; i < value.length; i += 1) h = (h * 31 + value.charCodeAt(i)) >>> 0
@@ -222,46 +236,78 @@ function RatingLine({ post, center = false }: { post: SitePost; center?: boolean
 function ArticleArchiveCard({ post, href, index }: { post: SitePost; href: string; index: number }) {
   const image = getImage(post)
   const category = getCategory(post, 'Article')
+  const rating = ratingOf(post)
+  const filled = Math.round(rating)
   return (
-    <Link href={href} className={`${cardBase} overflow-hidden`}>
-      <div className="aspect-[16/10] overflow-hidden bg-[var(--tk-raised)]">
-        <img src={image} alt="" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]" />
+    <Link href={href} className={`${cardBase} flex flex-col overflow-hidden`}>
+      <div className="relative aspect-[5/4] overflow-hidden bg-[var(--tk-raised)]">
+        <img src={image} alt="" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]" />
+        <span className="absolute right-4 top-4 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+          /{String(index + 1).padStart(3, '0')}
+        </span>
       </div>
-      <div className="p-6 sm:p-7">
-        <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--tk-accent)]">
-          <span>{category}</span>
-          <span className="text-[var(--tk-muted)]">· No. {String(index + 1).padStart(2, '0')}</span>
+      <div className="flex flex-1 flex-col p-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--tk-accent)]">{category}</p>
+        <h2 className="editable-display mt-3 line-clamp-2 text-2xl font-bold leading-[1.05] tracking-[-0.02em] text-[var(--tk-text)]">{post.title}</h2>
+        <p className="mt-3 line-clamp-2 flex-1 text-sm leading-6 text-[var(--tk-muted)]">{getSummary(post)}</p>
+        <div className="mt-5 flex items-center justify-between border-t border-[var(--tk-line)] pt-4">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--tk-muted)]">
+            <span className="inline-flex items-center gap-[2px]">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className={`h-3 w-3 ${i < filled ? 'fill-[var(--tk-accent)] text-[var(--tk-accent)]' : 'text-[var(--tk-muted)]/40'}`} />
+              ))}
+            </span>
+            {rating.toFixed(1)}
+          </span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--tk-line)] text-[var(--tk-text)] transition group-hover:border-[var(--tk-accent)] group-hover:bg-[var(--tk-accent)] group-hover:text-[var(--tk-on-accent)]">
+            <ArrowUpRight className="h-4 w-4" />
+          </span>
         </div>
-        <h2 className="editable-display mt-3 text-2xl font-semibold leading-snug tracking-[-0.02em]">{post.title}</h2>
-        <RatingLine post={post} />
-        <p className="mt-3 line-clamp-2 text-[15px] leading-7 text-[var(--tk-muted)]">{getSummary(post)}</p>
-        <CardArrow label="Read article" />
       </div>
     </Link>
   )
 }
 
-function ListingArchiveCard({ post, href }: { post: SitePost; href: string }) {
-  const logo = getImages(post)[0]
+function ListingArchiveCard({ post, href, index, featured = false }: { post: SitePost; href: string; index: number; featured?: boolean }) {
+  const image = getImage(post)
   const location = getField(post, ['location', 'address', 'city'])
-  const phone = getField(post, ['phone', 'telephone', 'mobile'])
-  const website = getField(post, ['website', 'url'])
+  const category = getCategory(post, 'Business')
+  const rating = ratingOf(post)
+  const filled = Math.round(rating)
   return (
-    <Link href={href} className={`${cardBase} flex items-center gap-5 p-5 sm:p-6`}>
-      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-[1rem] border border-[var(--tk-line)] bg-[var(--tk-raised)]">
-        {logo ? <img src={logo} alt="" className="h-full w-full object-cover" /> : <BriefcaseBusiness className="h-9 w-9 text-[var(--tk-muted)]" />}
+    <Link href={href} className={`${cardBase} flex h-full flex-col overflow-hidden`}>
+      <div className={`relative overflow-hidden bg-[var(--tk-raised)] ${featured ? 'aspect-[16/9]' : 'aspect-[5/4]'}`}>
+        {image ? <img src={image} alt="" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.05]" /> : <div className="flex h-full items-center justify-center"><BriefcaseBusiness className="h-12 w-12 text-[var(--tk-muted)]" /></div>}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(0,0,0,0.55))]" />
+        <span className="absolute left-4 top-4 rounded-full bg-[var(--tk-accent)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--tk-on-accent)]">
+          {category}
+        </span>
+        <span className="absolute right-4 top-4 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+          /{String(index + 1).padStart(3, '0')}
+        </span>
       </div>
-      <div className="min-w-0 flex-1">
-        <h2 className="editable-display truncate text-xl font-semibold tracking-[-0.02em]">{post.title}</h2>
-        <RatingLine post={post} />
-        <p className="mt-2 line-clamp-1 text-sm leading-6 text-[var(--tk-muted)]">{getSummary(post)}</p>
-        <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium text-[var(--tk-muted)]">
-          {location ? <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {location}</span> : null}
-          {phone ? <span className="inline-flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {phone}</span> : null}
-          {website ? <span className="inline-flex items-center gap-1.5"><Globe className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> Website</span> : null}
+      <div className="flex flex-1 flex-col p-6">
+        <h2 className={`editable-display line-clamp-2 font-bold leading-[1.05] tracking-[-0.02em] text-[var(--tk-text)] ${featured ? 'text-3xl' : 'text-2xl'}`}>{post.title}</h2>
+        <p className="mt-3 line-clamp-2 flex-1 text-sm leading-6 text-[var(--tk-muted)]">{getSummary(post)}</p>
+        {location ? (
+          <p className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--tk-muted)]">
+            <MapPin className="h-3.5 w-3.5 text-[var(--tk-accent)]" /> {location}
+          </p>
+        ) : null}
+        <div className="mt-5 flex items-center justify-between border-t border-[var(--tk-line)] pt-4">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--tk-muted)]">
+            <span className="inline-flex items-center gap-[2px]">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className={`h-3 w-3 ${i < filled ? 'fill-[var(--tk-accent)] text-[var(--tk-accent)]' : 'text-[var(--tk-muted)]/40'}`} />
+              ))}
+            </span>
+            {rating.toFixed(1)}
+          </span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--tk-line)] text-[var(--tk-text)] transition group-hover:border-[var(--tk-accent)] group-hover:bg-[var(--tk-accent)] group-hover:text-[var(--tk-on-accent)]">
+            <ArrowUpRight className="h-4 w-4" />
+          </span>
         </div>
       </div>
-      <ArrowUpRight className="h-5 w-5 shrink-0 text-[var(--tk-muted)] transition group-hover:text-[var(--tk-accent)]" />
     </Link>
   )
 }
@@ -303,18 +349,31 @@ function ImageArchiveCard({ post, href, index }: { post: SitePost; href: string;
   )
 }
 
-function BookmarkArchiveCard({ post, href, index }: { post: SitePost; href: string; index: number }) {
+function BookmarkArchiveCard({ post, href, index, featured = false }: { post: SitePost; href: string; index: number; featured?: boolean }) {
   const website = getField(post, ['website', 'url', 'link'])
+  const category = getCategory(post, 'Bookmark')
   return (
-    <Link href={href} className={`${cardBase} flex gap-4 p-6`}>
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--tk-accent-soft)] text-[var(--tk-accent)]">
-        <Globe className="h-5 w-5" />
+    <Link href={href} className={`${cardBase} flex h-full flex-col justify-between p-8 ${featured ? 'aspect-[16/9]' : 'aspect-square'}`}>
+      <div className="flex items-start justify-between gap-4">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--tk-accent)] text-[var(--tk-on-accent)]">
+          <Globe className="h-5 w-5" />
+        </span>
+        <span className="flex flex-col items-end gap-1 text-right">
+          <span className="rounded-full bg-[var(--tk-accent-soft)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--tk-accent)]">
+            {category}
+          </span>
+          <span className="text-[10px] font-medium uppercase tracking-[0.24em] text-[var(--tk-muted)]">/{String(index + 1).padStart(3, '0')}</span>
+        </span>
       </div>
-      <div className="min-w-0 flex-1">
-        <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--tk-muted)]">Saved · {String(index + 1).padStart(2, '0')}</span>
-        <h2 className="editable-display mt-1.5 text-lg font-semibold leading-snug tracking-[-0.02em]">{post.title}</h2>
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--tk-muted)]">{getSummary(post)}</p>
-        {website ? <p className="mt-3 truncate text-xs font-medium text-[var(--tk-accent)]">{cleanDomain(website)}</p> : null}
+      <div>
+        <h2 className={`editable-display line-clamp-3 font-bold leading-[1.05] tracking-[-0.02em] text-[var(--tk-text)] ${featured ? 'text-4xl' : 'text-2xl'}`}>{post.title}</h2>
+        <p className={`mt-4 line-clamp-2 leading-6 text-[var(--tk-muted)] ${featured ? 'text-base' : 'text-sm'}`}>{getSummary(post)}</p>
+        <div className="mt-6 flex items-center justify-between border-t border-[var(--tk-line)] pt-4">
+          {website ? <p className="truncate text-xs font-medium text-[var(--tk-accent)]">{cleanDomain(website)}</p> : <span className="text-xs font-medium text-[var(--tk-muted)]">Saved bookmark</span>}
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--tk-line)] text-[var(--tk-text)] transition group-hover:border-[var(--tk-accent)] group-hover:bg-[var(--tk-accent)] group-hover:text-[var(--tk-on-accent)]">
+            <ArrowUpRight className="h-4 w-4" />
+          </span>
+        </div>
       </div>
     </Link>
   )

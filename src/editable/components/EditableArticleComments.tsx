@@ -79,7 +79,7 @@ export function EditableArticleComments({ slug, comments = [] }: { slug: string;
           onChange={(event) => setName(event.target.value)}
           placeholder="Your name (optional)"
           maxLength={60}
-          className="h-11 w-full rounded-lg border border-[var(--tk-line)] bg-[var(--tk-bg)] px-4 text-sm text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
+          className="h-11 w-full rounded-xl border border-[var(--tk-line)] bg-[var(--tk-bg)] px-4 text-sm text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
         />
         <textarea
           value={text}
@@ -87,13 +87,13 @@ export function EditableArticleComments({ slug, comments = [] }: { slug: string;
           placeholder="Share your thoughts…"
           rows={3}
           maxLength={1500}
-          className="mt-3 w-full resize-y rounded-lg border border-[var(--tk-line)] bg-[var(--tk-bg)] px-4 py-3 text-sm leading-6 text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
+          className="mt-3 w-full resize-y rounded-xl border border-[var(--tk-line)] bg-[var(--tk-bg)] px-4 py-3 text-sm leading-6 text-[var(--tk-text)] outline-none transition focus:border-[var(--tk-accent)]"
         />
         <div className="mt-3 flex justify-end">
           <button
             type="submit"
             disabled={!text.trim()}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--tk-accent)] px-6 py-2.5 text-sm font-bold text-[var(--tk-on-accent)] transition hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--tk-accent)] px-6 py-2.5 text-sm font-bold text-[var(--tk-on-accent)] transition hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-4 w-4" /> Post comment
           </button>

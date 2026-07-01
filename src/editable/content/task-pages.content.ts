@@ -28,11 +28,11 @@ export const taskPageVoices = {
   },
   sbm: {
     eyebrow: 'Saved resources',
-    headline: 'Social bookmarks arranged like curated collections.',
-    description: 'Bookmark pages should feel like shelves of useful resources, tools, references, and collections.',
+    headline: 'Bookmarks worth saving, shared by the community.',
+    description: 'Browse curated links, tools, and resources — saved and organized so the best finds are easy to rediscover.',
     filterLabel: 'Filter collection',
     secondaryNote: 'Curated resources need grouping and calm metadata.',
-    chips: ['Collections', 'Resources', 'Reference flow'],
+    chips: ['Curated links', 'Save & share', 'Community picks'],
   },
   profile: {
     eyebrow: 'People and profiles',
@@ -52,11 +52,11 @@ export const taskPageVoices = {
   },
   listing: {
     eyebrow: 'Business directory',
-    headline: 'Business listings built for discovery and comparison.',
-    description: 'Listing pages should behave like a directory with trust cues, metadata, and a practical search rhythm.',
+    headline: 'Local businesses worth discovering, comparing, and reviewing.',
+    description: 'Browse verified listings by category, compare ratings and details, and find the right business faster.',
     filterLabel: 'Filter business category',
     secondaryNote: 'Prioritize comparison, location, and direct action paths.',
-    chips: ['Directory', 'Compare', 'Business discovery'],
+    chips: ['Verified businesses', 'Compare & review', 'Local discovery'],
   },
   image: {
     eyebrow: 'Visual gallery',
