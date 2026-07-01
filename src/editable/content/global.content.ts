@@ -3,34 +3,33 @@ import { slot4BrandConfig } from '@/editable/theme/brand.config'
 export const globalContent = {
   site: {
     name: slot4BrandConfig.siteName,
-    tagline: slot4BrandConfig.tagline || 'Independent reading platform',
+    tagline: slot4BrandConfig.tagline || 'Discover local businesses. Save what matters.',
     domain: slot4BrandConfig.domain,
     baseUrl: slot4BrandConfig.baseUrl,
   },
   nav: {
-    tagline: 'Independent reading platform',
+    tagline: 'Local business directory & bookmarking',
     primaryLinks: [
-      { label: 'Articles', href: '/articles' },
-      { label: 'Visuals', href: '/image-sharing' },
-      { label: 'Listings', href: '/listings' },
+      { label: 'Listings', href: '/listing' },
+      { label: 'Bookmarks', href: '/sbm' },
+      { label: 'Search', href: '/search' },
       { label: 'Contact', href: '/contact' },
     ],
     actions: {
       primary: { label: 'Start exploring', href: '/' },
-      secondary: { label: 'Submit', href: '/contact' },
+      secondary: { label: 'Submit', href: '/create' },
     },
   },
   footer: {
-    tagline: 'Stories, resources, and discoverable posts',
-    description: 'A connected publishing surface for articles, visuals, listings, profiles, bookmarks, and downloadable resources.',
+    tagline: 'Businesses worth finding, links worth saving',
+    description: 'A place to discover and review trusted local businesses, and to save and share the best links and resources you find.',
     columns: [
       {
         title: 'Explore',
         links: [
-          { label: 'Articles', href: '/articles' },
-          { label: 'Listings', href: '/listings' },
-          { label: 'Images', href: '/image-sharing' },
-          { label: 'PDF Library', href: '/pdf' },
+          { label: 'Listings', href: '/listing' },
+          { label: 'Bookmarks', href: '/sbm' },
+          { label: 'Search', href: '/search' },
         ],
       },
       {
@@ -41,7 +40,7 @@ export const globalContent = {
         ],
       },
     ],
-    bottomNote: 'Built for clean discovery and connected publishing.',
+    bottomNote: 'Built for clean discovery — find businesses, save what matters.',
   },
   commonLabels: {
     readMore: 'Read more',
